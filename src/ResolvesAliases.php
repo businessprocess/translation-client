@@ -24,7 +24,7 @@ trait ResolvesAliases
         return preg_replace_callback('/{(?<alias>\w+)}/', function ($matches) {
             $resolved = $this->storage->get($this->mapAlias($matches['alias']));
             if ($resolved === null) {
-                throw new InvalidArgumentException('No value stored for alias: ' . $matches['alias']);
+                throw new InvalidArgumentException('Can not resolve alias: ' . $matches['alias']);
             }
 
             return $resolved;
