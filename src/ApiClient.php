@@ -4,6 +4,7 @@ namespace Translate;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\RequestException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
@@ -13,36 +14,38 @@ class ApiClient
 {
     use ResolvesAliases;
 
+    public const DEFAULT_API_URL = 'http://dev-api.translate.center/api/v1/';
+
     /**
      * @var array
      */
-    private $options;
+    protected $options;
 
     /**
      * @var CacheInterface
      */
-    protected $cache;
+    protected $storage;
 
     /**
      * @var Client
      */
-    private $httpClient;
+    protected $httpClient;
 
     /**
-     * @param CacheInterface $cache
      * @param array $options
+     * @param CacheInterface $storage
      */
-    public function __construct(CacheInterface $cache, array $options = [])
+    public function __construct(array $options, CacheInterface $storage)
     {
         $this->processOptions($options);
-        $this->cache = $cache;
+        $this->storage = $storage;
         $this->httpClient = new Client(['base_uri' => $this->options['api']]);
     }
 
     /**
      * @param array $options
      */
-    private function processOptions(array &$options): void
+    protected function processOptions(array $options): void
     {
         if (!isset($options['login'])) {
             throw new \InvalidArgumentException('Login is required!');
@@ -50,9 +53,9 @@ class ApiClient
         if (!isset($options['password'])) {
             throw new \InvalidArgumentException('Password is required!');
         }
-        if (!isset($options['api'])) {
-            throw new \InvalidArgumentException('Api url is required!');
-        }
+        $options['api'] = $options['api'] ?? static::DEFAULT_API_URL;
+        $options['maxAttempts'] = $options['maxAttempts'] ?? 3;
+
         $this->options = $options;
     }
 
@@ -66,10 +69,23 @@ class ApiClient
      */
     public function request(string $method, string $uri, array $options = []): ResponseInterface
     {
+        static $attempt = 0;
         $this->ensureAuth();
         $options = array_merge_recursive($options, ['headers' => ['Authorization' => $this->resolveAliases('{authToken}')]]);
 
-        return $this->httpClient->request($method, $this->resolveAliases($uri), $options);
+        try {
+            $response = $this->httpClient->request($method, $this->resolveAliases($uri), $options);
+        } catch (RequestException $exception) {
+            if ($attempt < $this->options['maxAttempts'] && $exception->getCode() === 401) {
+                ++$attempt;
+                return $this->reauthenticate()->request($method, $uri, $options);
+            }
+
+            throw $exception;
+        }
+
+        return $response;
+
     }
 
     /**
@@ -77,7 +93,7 @@ class ApiClient
      * @throws GuzzleException
      * @throws InvalidArgumentException
      */
-    private function ensureAuth($forceReauthenticate = false): void
+    protected function ensureAuth($forceReauthenticate = false): void
     {
         if (!$forceReauthenticate && $this->hasAlias('authToken') && $this->hasAlias('userUuid')) {
             return;
@@ -93,5 +109,17 @@ class ApiClient
         $data = \GuzzleHttp\json_decode($resp->getBody(), true);
         $this->setAlias('authToken', $data['authToken']);
         $this->setAlias('userUuid', $data['userUuid']);
+    }
+
+    /**
+     * @return $this
+     * @throws GuzzleException
+     * @throws InvalidArgumentException
+     */
+    public function reauthenticate(): self
+    {
+        $this->ensureAuth(true);
+
+        return $this;
     }
 }

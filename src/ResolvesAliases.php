@@ -17,7 +17,7 @@ trait ResolvesAliases
     private function resolveAliases(string $uri): string
     {
         return preg_replace_callback('/{(?<alias>\w+)}/', function ($matches) {
-            return $this->cache->get($this->mapAlias($matches['alias']), 'undefined');
+            return $this->storage->get($this->mapAlias($matches['alias']), 'undefined');
         }, $uri);
     }
 
@@ -38,7 +38,7 @@ trait ResolvesAliases
      */
     public function setAlias(string $alias, $value): bool
     {
-        return $this->cache->set($this->mapAlias($alias), $value);
+        return $this->storage->set($this->mapAlias($alias), $value);
     }
 
     /**
@@ -48,7 +48,7 @@ trait ResolvesAliases
      */
     public function hasAlias(string $alias): bool
     {
-        return $this->cache->has($this->mapAlias($alias));
+        return $this->storage->has($this->mapAlias($alias));
     }
 
     /**
@@ -58,6 +58,6 @@ trait ResolvesAliases
      */
     public function removeAlias(string $alias): bool
     {
-        return $this->cache->delete($this->mapAlias($alias));
+        return $this->storage->delete($this->mapAlias($alias));
     }
 }
