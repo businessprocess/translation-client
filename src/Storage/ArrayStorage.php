@@ -38,7 +38,6 @@ class ArrayStorage implements CacheInterface
             } catch (\Throwable $e) {
                 throw new StorageException('Invalid key type: ' . $e->getMessage());
             }
-
         } else {
             throw new StorageException('Invalid key type of ' . print_r($key, 1));
         }

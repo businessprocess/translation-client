@@ -85,7 +85,6 @@ class ApiClient
         }
 
         return $response;
-
     }
 
     /**
