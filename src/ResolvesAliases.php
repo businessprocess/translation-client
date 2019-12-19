@@ -2,22 +2,30 @@
 
 namespace Translate;
 
+use InvalidArgumentException;
 use function preg_replace_callback;
 
 trait ResolvesAliases
 {
+    /**
+     * @var array
+     */
     public static $aliasMap = [
         'userUuid' => 'translator.userUuid',
         'projectUuid' => 'translator.projectUuid'
     ];
+
     /**
      * @param string $uri
      * @return string
      */
-    private function resolveAliases(string $uri): string
+    protected function resolveAliases(string $uri): string
     {
         return preg_replace_callback('/{(?<alias>\w+)}/', function ($matches) {
-            return $this->storage->get($this->mapAlias($matches['alias']), 'undefined');
+            $resolved = $this->storage->get($this->mapAlias($matches['alias']));
+            if ($resolved === null) {
+                throw new InvalidArgumentException('No value stored for alias: ' . $matches['alias']);
+            }
         }, $uri);
     }
 

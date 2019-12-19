@@ -27,7 +27,7 @@ class ApiClient
     protected $storage;
 
     /**
-     * @var Client
+     * @var Client|null
      */
     protected $httpClient;
 
@@ -39,7 +39,6 @@ class ApiClient
     {
         $this->processOptions($options);
         $this->storage = $storage;
-        $this->httpClient = new Client(['base_uri' => $this->options['api']]);
     }
 
     /**
@@ -60,6 +59,19 @@ class ApiClient
     }
 
     /**
+     * @return Client
+     */
+    public function httpClient(): Client
+    {
+        if ($this->httpClient === null) {
+            $this->httpClient = new Client(['base_uri' => $this->options['api']]);
+        }
+        return $this->httpClient;
+    }
+
+    /**
+     * Sends authenticated request to API
+     *
      * @param string $method
      * @param string $uri
      * @param array $options
@@ -71,10 +83,13 @@ class ApiClient
     {
         static $attempt = 0;
         $this->ensureAuth();
-        $options = array_merge_recursive($options, ['headers' => ['Authorization' => $this->resolveAliases('{authToken}')]]);
+        $options = array_merge_recursive(['headers' => [
+            'Authorization' => $this->resolveAliases('{authToken}'),
+            'Content-Type' => 'application/json'
+        ]], $options);
 
         try {
-            $response = $this->httpClient->request($method, $this->resolveAliases($uri), $options);
+            $response = $this->httpClient()->request($method, $this->resolveAliases($uri), $options);
         } catch (RequestException $exception) {
             if ($attempt < $this->options['maxAttempts'] && $exception->getCode() === 401) {
                 ++$attempt;
@@ -88,6 +103,20 @@ class ApiClient
     }
 
     /**
+     * Sends request without any data manipulation
+     *
+     * @param string $method
+     * @param string $uri
+     * @param array $options
+     * @return ResponseInterface
+     * @throws GuzzleException
+     */
+    public function rawRequest(string $method, string $uri, array $options = []): ResponseInterface
+    {
+        return $this->httpClient()->request($method, $uri, $options);
+    }
+
+    /**
      * @param bool $forceReauthenticate
      * @throws GuzzleException
      * @throws InvalidArgumentException
@@ -98,7 +127,7 @@ class ApiClient
             return;
         }
 
-        $resp = $this->httpClient->request('POST', 'login', [
+        $resp = $this->httpClient()->request('POST', 'login', [
             'json' => [
                 'login' => $this->options['login'],
                 'password' => $this->options['password']
