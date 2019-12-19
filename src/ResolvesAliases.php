@@ -26,6 +26,8 @@ trait ResolvesAliases
             if ($resolved === null) {
                 throw new InvalidArgumentException('No value stored for alias: ' . $matches['alias']);
             }
+
+            return $resolved;
         }, $uri);
     }
 
