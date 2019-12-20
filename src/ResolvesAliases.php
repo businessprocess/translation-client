@@ -42,11 +42,11 @@ trait ResolvesAliases
 
     /**
      * @param string $alias
-     * @param $value
+     * @param string $value
      * @return bool
      * @throws \Psr\SimpleCache\InvalidArgumentException
      */
-    public function setAlias(string $alias, $value): bool
+    public function setAlias(string $alias, string $value): bool
     {
         return $this->storage->set($this->mapAlias($alias), $value);
     }
