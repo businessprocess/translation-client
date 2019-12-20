@@ -5,6 +5,7 @@ namespace Translate;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Promise\PromiseInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
@@ -100,6 +101,25 @@ class ApiClient
         }
 
         return $response;
+    }
+
+    /**
+     * @param string $method
+     * @param string $uri
+     * @param array $options
+     * @return PromiseInterface
+     * @throws GuzzleException
+     * @throws InvalidArgumentException
+     */
+    public function requestAsync(string $method, string $uri, array $options = []): PromiseInterface
+    {
+        $this->ensureAuth();
+        $options = array_merge_recursive(['headers' => [
+            'Authorization' => $this->resolveAliases('{authToken}'),
+            'Content-Type' => 'application/json'
+        ]], $options);
+
+        return $this->httpClient()->requestAsync($method, $this->resolveAliases($uri), $options);
     }
 
     /**
