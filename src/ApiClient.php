@@ -84,10 +84,7 @@ class ApiClient
     {
         static $attempt = 0;
         $this->ensureAuth();
-        $options = array_merge_recursive(['headers' => [
-            'Authorization' => $this->resolveAliases('{authToken}'),
-            'Content-Type' => 'application/json'
-        ]], $options);
+        $options = array_merge_recursive($this->getDefaultOptions(), $options);
 
         try {
             $response = $this->httpClient()->request($method, $this->resolveAliases($uri), $options);
@@ -104,6 +101,20 @@ class ApiClient
     }
 
     /**
+     * @return array
+     */
+    protected function getDefaultOptions(): array
+    {
+        return [
+            'headers' => [
+                'Authorization' => $this->resolveAliases('{authToken}'),
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json'
+            ]
+        ];
+    }
+
+    /**
      * @param string $method
      * @param string $uri
      * @param array $options
@@ -114,10 +125,7 @@ class ApiClient
     public function requestAsync(string $method, string $uri, array $options = []): PromiseInterface
     {
         $this->ensureAuth();
-        $options = array_merge_recursive(['headers' => [
-            'Authorization' => $this->resolveAliases('{authToken}'),
-            'Content-Type' => 'application/json'
-        ]], $options);
+        $options = array_merge_recursive($this->getDefaultOptions(), $options);
 
         return $this->httpClient()->requestAsync($method, $this->resolveAliases($uri), $options);
     }

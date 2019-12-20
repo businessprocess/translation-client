@@ -1,7 +1,11 @@
 Translate API PHP HTTP client
 =============================
 
-Translate API is a PHP HTTP client for working with translate API.
+[![Latest Stable Version](https://poser.pugx.org/pervozdanniy/translation-client/v/stable)](https://packagist.org/packages/pervozdanniy/translation-client)
+![Total Downloads](https://poser.pugx.org/pervozdanniy/translation-client/downloads)
+[![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
+
+Translate API is a PSR-compatible PHP HTTP client for working with translate API.
 
 [API Documentation](http://dev-api.translate.center/api-docs/)
 
