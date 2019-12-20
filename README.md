@@ -41,12 +41,15 @@ composer update
 ## Usage
 
 ```php
+use Translate\ApiClient;
+use Translate\Storage\ArrayStorage;
+
 $options = [
     'login' => '<YOUR_LOGIN>',
     'password' => '<YOUR_PASSWORD>',
 ];
 // you can pass any storage you want that implements \Psr\SimpleCache\CacheInterface
-$client = new \Translate\ApiClient($options, new \Translate\Storage\ArrayStorage);
+$client = new ApiClient($options, new ArrayStorage);
 $response = $client->request('GET', 'users');
 
 echo $response->getStatusCode(); # 200
@@ -78,3 +81,12 @@ $response = $client->request('GET', 'projects/{projectUuid}/languages');
 | password    | Your API password (required)                                     | null                                    |
 | api         | API base uri                                                     | http://dev-api.translate.center/api/v1/ |
 | maxAttempts | Number of attempts to reauthenticate to API on 401 response code | 3                                       |
+
+###PSR
+For PSR-7 responses compatibility use PSR wrapper:
+```php
+use Translate\Psr\Wrapper;
+
+$wrapper = new Wrapper($client);
+$response = $wrapper->request('GET', 'users/{userUuid}/projects'); #Psr\Http\Message\ResponseInterface
+```

@@ -3,10 +3,9 @@
 namespace Translate;
 
 use GuzzleHttp\Client;
-use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Promise\PromiseInterface;
-use Psr\Http\Message\ResponseInterface;
+use GuzzleHttp\Message\FutureResponse;
+use GuzzleHttp\Message\ResponseInterface;
 use Psr\SimpleCache\CacheInterface;
 use Psr\SimpleCache\InvalidArgumentException;
 use function array_merge_recursive;
@@ -77,7 +76,6 @@ class ApiClient
      * @param string $uri
      * @param array $options
      * @return ResponseInterface
-     * @throws GuzzleException
      * @throws InvalidArgumentException
      */
     public function request(string $method, string $uri, array $options = []): ResponseInterface
@@ -85,9 +83,10 @@ class ApiClient
         static $attempt = 0;
         $this->ensureAuth();
         $options = array_merge_recursive($this->getDefaultOptions(), $options);
+        $request = $this->httpClient()->createRequest($method, $this->resolveAliases($uri), $options);
 
         try {
-            $response = $this->httpClient()->request($method, $this->resolveAliases($uri), $options);
+            $response = $this->httpClient()->send($request);
         } catch (RequestException $exception) {
             if ($attempt < $this->options['maxAttempts'] && $exception->getCode() === 401) {
                 ++$attempt;
@@ -110,7 +109,8 @@ class ApiClient
                 'Authorization' => $this->resolveAliases('{authToken}'),
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json'
-            ]
+            ],
+            'future' => false
         ];
     }
 
@@ -118,16 +118,16 @@ class ApiClient
      * @param string $method
      * @param string $uri
      * @param array $options
-     * @return PromiseInterface
-     * @throws GuzzleException
+     * @return FutureResponse
      * @throws InvalidArgumentException
      */
-    public function requestAsync(string $method, string $uri, array $options = []): PromiseInterface
+    public function requestAsync(string $method, string $uri, array $options = []): FutureResponse
     {
         $this->ensureAuth();
-        $options = array_merge_recursive($this->getDefaultOptions(), $options);
+        $options = array_merge_recursive($this->getDefaultOptions(), ['future' => true], $options);
+        $request = $this->httpClient()->createRequest($method, $this->resolveAliases($uri), $options);
 
-        return $this->httpClient()->requestAsync($method, $this->resolveAliases($uri), $options);
+        return $this->httpClient()->send($request);
     }
 
     /**
@@ -136,17 +136,17 @@ class ApiClient
      * @param string $method
      * @param string $uri
      * @param array $options
-     * @return ResponseInterface
-     * @throws GuzzleException
+     * @return FutureResponse|ResponseInterface|\GuzzleHttp\Ring\Future\FutureInterface|null
      */
-    public function rawRequest(string $method, string $uri, array $options = []): ResponseInterface
+    public function rawRequest(string $method, string $uri, array $options = [])
     {
-        return $this->httpClient()->request($method, $uri, $options);
+        $request = $this->httpClient()->createRequest($method, $uri, $options);
+
+        return $this->httpClient()->send($request);
     }
 
     /**
      * @param bool $forceReauthenticate
-     * @throws GuzzleException
      * @throws InvalidArgumentException
      */
     protected function ensureAuth($forceReauthenticate = false): void
@@ -155,21 +155,20 @@ class ApiClient
             return;
         }
 
-        $resp = $this->httpClient()->request('POST', 'login', [
+        $request = $this->httpClient()->createRequest('POST', 'login', array_merge($this->getDefaultOptions(), [
             'json' => [
                 'login' => $this->options['login'],
                 'password' => $this->options['password']
-            ]
-        ]);
+            ],
+        ]));
 
-        $data = \GuzzleHttp\json_decode($resp->getBody(), true);
+        $data = $this->httpClient()->send($request)->json();
         $this->setAlias('authToken', $data['authToken']);
         $this->setAlias('userUuid', $data['userUuid']);
     }
 
     /**
      * @return $this
-     * @throws GuzzleException
      * @throws InvalidArgumentException
      */
     public function reauthenticate(): self
