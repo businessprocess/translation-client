@@ -64,7 +64,7 @@ class ApiClient
     public function httpClient(): Client
     {
         if ($this->httpClient === null) {
-            $this->httpClient = new Client(['base_uri' => $this->options['api']]);
+            $this->httpClient = new Client(['base_url' => $this->options['api']]);
         }
         return $this->httpClient;
     }
@@ -155,14 +155,19 @@ class ApiClient
             return;
         }
 
-        $request = $this->httpClient()->createRequest('POST', 'login', array_merge($this->getDefaultOptions(), [
+        $request = $this->httpClient()->createRequest('POST', 'login', [
             'json' => [
                 'login' => $this->options['login'],
                 'password' => $this->options['password']
             ],
-        ]));
+            'headers' => [
+                'Content-Type' => 'application/json',
+                'Accept' => 'application/json'
+            ],
+        ]);
 
         $data = $this->httpClient()->send($request)->json();
+
         $this->setAlias('authToken', $data['authToken']);
         $this->setAlias('userUuid', $data['userUuid']);
     }
