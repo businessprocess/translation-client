@@ -84,10 +84,13 @@ class ApiClient
     {
         static $attempt = 0;
         $this->ensureAuth();
-        $options = array_merge_recursive($this->getDefaultOptions(), $options);
 
         try {
-            $response = $this->httpClient()->request($method, $this->resolveAliases($uri), $options);
+            $response = $this->httpClient()->request(
+                $method,
+                $this->resolveAliases($uri),
+                array_merge_recursive($this->getDefaultOptions(), $options)
+            );
         } catch (RequestException $exception) {
             if ($attempt < $this->options['maxAttempts'] && $exception->getCode() === 401) {
                 ++$attempt;
