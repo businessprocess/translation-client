@@ -53,7 +53,7 @@ class ApiClient
         if (!isset($options['password'])) {
             throw new \InvalidArgumentException('Password is required!');
         }
-        $options['api'] = $options['api'] ?? static::DEFAULT_API_URL;
+        $options['http']['base_uri'] = $options['api'] ?? static::DEFAULT_API_URL;
         $options['maxAttempts'] = $options['maxAttempts'] ?? 3;
 
         $this->options = $options;
@@ -65,7 +65,7 @@ class ApiClient
     public function httpClient(): Client
     {
         if ($this->httpClient === null) {
-            $this->httpClient = new Client(['base_uri' => $this->options['api']]);
+            $this->httpClient = new Client($this->options['http']);
         }
         return $this->httpClient;
     }
@@ -99,6 +99,7 @@ class ApiClient
 
             throw $exception;
         }
+        $attempt = 0;
 
         return $response;
     }
